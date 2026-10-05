@@ -7,7 +7,8 @@ android {
     buildToolsVersion "36.0.0"
 
     defaultConfig {
-        applicationId "io.kazutoiris.pure.shot"
+        applicationId "io.github.umedk1186_beep.pureshot
+        "
         minSdk 29
         targetSdkVersion 36
         versionCode 3
@@ -24,7 +25,8 @@ android {
     }
     compileOptions {
     }
-    namespace 'io.kazutoiris.pure.shot'
+    namespace 'io.github.umedk1186_beep.pureshot
+    '
 }
 
 dependencies {
