@@ -26,10 +26,20 @@ public class XposedModule implements IXposedHookLoadPackage {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 String name = (String) XposedHelpers.getObjectField(param.thisObject, "mName");
-                if (name != null && (name.contains("StatusBar") || name.contains("NavigationBar"))) {
-                    int flags = XposedHelpers.getIntField(param.thisObject, "mFlags");
-                    // Apply SKIP_SCREENSHOT (0x00000040)
-                    XposedHelpers.setIntField(param.thisObject, "mFlags", flags | 0x40);
+                if (name != null) {
+                    String lower = name.toLowerCase();
+                    // Filters Status Bar, Navigation Bar, 3-button bar, and Gesture pill/handle
+                    if (lower.contains("statusbar")
+                            || lower.contains("navigationbar")
+                            || lower.contains("navbar")
+                            || lower.contains("navigation")
+                            || lower.contains("gesturehandle")
+                            || lower.contains("gestural")) {
+
+                        int flags = XposedHelpers.getIntField(param.thisObject, "mFlags");
+                        // Apply SKIP_SCREENSHOT (0x00000040)
+                        XposedHelpers.setIntField(param.thisObject, "mFlags", flags | 0x40);
+                    }
                 }
             }
         });
