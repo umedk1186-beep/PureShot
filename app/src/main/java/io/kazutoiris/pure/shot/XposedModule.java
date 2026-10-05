@@ -1,60 +1,37 @@
 package io.kazutoiris.pure.shot;
 
-import android.util.SparseIntArray;
-import android.view.WindowManager;
-
-import java.lang.reflect.Constructor;
-import java.util.Objects;
-
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
-
 public class XposedModule implements IXposedHookLoadPackage {
+    @Override
+    public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+        if (!lpparam.packageName.equals("android")) {
+            return;
+        }
 
+        Class<?> builderClass = XposedHelpers.findClassIfExists(
+            "android.view.SurfaceControl$Builder",
+            lpparam.classLoader
+        );
 
-	@Override
-	public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws ClassNotFoundException {
-		if (!lpparam.isFirstApplication) return;
+        if (builderClass == null) {
+            return;
+        }
 
-		ClassLoader classLoader = lpparam.classLoader;
-
-		if (Objects.equals(lpparam.packageName, "android")) {
-			{
-				Class<?> hookClass = XposedHelpers.findClassIfExists(android.view.SurfaceControl.class.getCanonicalName(), classLoader);
-				for (Constructor<?> constructor : hookClass.getDeclaredConstructors()) {
-					// private SurfaceControl(SurfaceSession session, String name, int w, int h, int format, int flags,
-					//         SurfaceControl parent, SparseIntArray metadata, WeakReference<View> localOwnerView,
-					//         String callsite)
-					if (constructor.getParameterCount() == 10) {
-						XposedBridge.hookMethod(constructor, new XC_MethodHook() {
-							@Override
-							protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-								super.beforeHookedMethod(param);
-								String callsite = (String) param.args[9];
-								if (!Objects.equals(callsite, "WindowSurfaceController")) {
-									return;
-								}
-								SparseIntArray metadata = (SparseIntArray) param.args[7];
-								int windowType = metadata.get(2, -1);
-								if (windowType < WindowManager.LayoutParams.FIRST_SYSTEM_WINDOW || windowType == WindowManager.LayoutParams.TYPE_WALLPAPER) {
-									return;
-								}
-								if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.S) {
-									metadata.put(2, 441731);
-								} else {
-									int flags = (int) param.args[5];
-									flags |= 1 << 6;
-									param.args[5] = flags;
-								}
-							}
-						});
-					}
-				}
-			}
-		}
-	}
+        XposedBridge.hookAllMethods(builderClass, "build", new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                String name = (String) XposedHelpers.getObjectField(param.thisObject, "mName");
+                if (name != null && (name.contains("StatusBar") || name.contains("NavigationBar"))) {
+                    int flags = XposedHelpers.getIntField(param.thisObject, "mFlags");
+                    // Apply SKIP_SCREENSHOT (0x00000040)
+                    XposedHelpers.setIntField(param.thisObject, "mFlags", flags | 0x40);
+                }
+            }
+        });
+    }
 }
